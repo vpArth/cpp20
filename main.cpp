@@ -6,20 +6,16 @@ using std::cout;
 #include <coroutine>
 using std::suspend_always;
 
-
-resumable foo() {
-  cout << "#\t\t## Hello\n";
+gen<> bar() {
+  cout << 1;
   co_await suspend_always();
-  cout << "#\t\t## Coroutine\n";
+  cout << 2;
 }
 
-
 int main(){
-  resumable res = foo();
-  cout << "> initially suspended" << "\n";
-  res.resume();
-  cout << "> co_await suspended" << "\n";
-  res.resume();
-  cout << "> final suspended" << "\n";
-  res.resume();
+  auto r = bar();
+  while (r.resume()) {
+    cout << '.';
+  }
+  cout << "\n";
 }

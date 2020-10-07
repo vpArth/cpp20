@@ -7,66 +7,50 @@
 #include <iostream> 
 using std::terminate;
 
-class resumable {
-public:
-  struct promise_type {
-    auto get_return_object();
-    auto initial_suspend();
-    auto final_suspend();
-    void return_void();
-    void unhandled_exception();
-    // auto yield_value();
-    // auto return_value();
-  };
-  using coroutine_handle = std::coroutine_handle<promise_type>;
 
-  resumable(coroutine_handle handle);
-  resumable(resumable&) = delete;
-  resumable(resumable &&rhs);
-  ~resumable();
+/* promise_type */
+struct CoPromiseAlways {
+  auto get_return_object();
+  auto initial_suspend();
+  auto final_suspend();
+  void return_void();
+  void unhandled_exception();
+  // auto yield_value();
+  // auto return_value();
+};
+auto CoPromiseAlways::get_return_object() {
+  return std::coroutine_handle<CoPromiseAlways>::from_promise(*this); 
+}
+auto CoPromiseAlways::initial_suspend() {return std::suspend_always(); }
+auto CoPromiseAlways::final_suspend() {return std::suspend_always(); }
+void CoPromiseAlways::return_void() {} 
+void CoPromiseAlways::unhandled_exception() {terminate(); }
+
+/* return_object */
+template <typename Promise=CoPromiseAlways>
+class gen {
+public:
+  using coroutine_handle = std::coroutine_handle<Promise>;
+  using promise_type = Promise;
+
+  gen(coroutine_handle handle);
+  gen(gen&) = delete;
+  gen(gen &&rhs);
+  ~gen();
 
   bool resume();
 private:
   coroutine_handle co_handle;
 };
-
-// implementation
-resumable::resumable(resumable::coroutine_handle handle) : co_handle(handle) { assert(handle); }
-resumable::resumable(resumable &&rhs): co_handle(rhs.co_handle) { rhs.co_handle = nullptr; }
-resumable::~resumable() { co_handle.destroy(); }
-
-bool resumable::resume() {
-  printf("|  resume()\n");
-  if (!co_handle.done()) {
-    printf("|  Not done yet... resuming\n");
-    co_handle.resume();
-  } else {
-    printf("|  Already done\n");
-  }
-  return !co_handle.done();
+template <typename Promise> gen<Promise>::gen(gen<Promise>::coroutine_handle handle) : co_handle(handle) { assert(handle); }
+template <typename Promise> gen<Promise>::gen(gen &&rhs): co_handle(rhs.co_handle) { rhs.co_handle = nullptr; }
+template <typename Promise> gen<Promise>::~gen() { co_handle.destroy(); }
+template <typename Promise> bool gen<Promise>::resume() {
+  bool alive = !co_handle.done();
+  if (alive) co_handle.resume();
+  return alive;
 }
 
-
-auto resumable::promise_type::get_return_object() {
-  printf("|  get_return_object();\n");
-  return resumable::coroutine_handle::from_promise(*this);
-}
-auto resumable::promise_type::initial_suspend() { 
-  printf("|  initial_suspend();\n");
-  return std::suspend_always(); 
-}
-auto resumable::promise_type::final_suspend() { 
-  printf("|  final_suspend();\n");
-  return std::suspend_always(); 
-}
-
-void resumable::promise_type::return_void() {
-  printf("|  return_void();\n");
-}
-void resumable::promise_type::unhandled_exception() {
-  printf("|  unhandled_exception();\n");
-  terminate();
-}
 /*
  promise_type {
   auto get_return_object();
