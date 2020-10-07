@@ -1,21 +1,17 @@
 #include "resumable.hpp"
+#include <cstdio>
 
-#include <iostream>
-using std::cout;
 
-#include <coroutine>
-using std::suspend_always;
-
-gen<> bar() {
-  cout << 1;
-  co_await suspend_always();
-  cout << 2;
+gen<CoPValue<int>, int> natural_numbers() {
+  for (auto i=0;; ++i) co_yield i;
 }
 
 int main(){
-  auto r = bar();
-  while (r.resume()) {
-    cout << '.';
+  auto r = natural_numbers();
+  for (auto i=0; i<10; ++i) {
+    for (auto li = 0; li < 30 && r.resume(); ++li) {
+      printf("%4d", r.get_value());
+    }
+    printf("\n");
   }
-  cout << "\n";
 }

@@ -9,25 +9,33 @@ using std::terminate;
 
 
 /* promise_type */
-struct CoPromiseAlways {
+template <typename T>
+struct CoPValue {
   auto get_return_object();
   auto initial_suspend();
   auto final_suspend();
   void return_void();
   void unhandled_exception();
-  // auto yield_value();
+  auto yield_value(T value);
   // auto return_value();
+  T current_value;
 };
-auto CoPromiseAlways::get_return_object() {
-  return std::coroutine_handle<CoPromiseAlways>::from_promise(*this); 
+template <typename T> auto CoPValue<T>::get_return_object() {
+  return std::coroutine_handle<CoPValue<T>>::from_promise(*this); 
 }
-auto CoPromiseAlways::initial_suspend() {return std::suspend_always(); }
-auto CoPromiseAlways::final_suspend() {return std::suspend_always(); }
-void CoPromiseAlways::return_void() {} 
-void CoPromiseAlways::unhandled_exception() {terminate(); }
+template <typename T> auto CoPValue<T>::initial_suspend() {return std::suspend_always(); }
+template <typename T> auto CoPValue<T>::yield_value(T value) {
+  current_value = value;
+  return std::suspend_always(); 
+}
+template <typename T> auto CoPValue<T>::final_suspend() {return std::suspend_always(); }
+template <typename T> void CoPValue<T>::return_void() {} 
+template <typename T> void CoPValue<T>::unhandled_exception() {terminate(); }
+
+
 
 /* return_object */
-template <typename Promise=CoPromiseAlways>
+template <class Promise, class T>
 class gen {
 public:
   using coroutine_handle = std::coroutine_handle<Promise>;
@@ -38,14 +46,18 @@ public:
   gen(gen &&rhs);
   ~gen();
 
+  T get_value();
   bool resume();
 private:
   coroutine_handle co_handle;
 };
-template <typename Promise> gen<Promise>::gen(gen<Promise>::coroutine_handle handle) : co_handle(handle) { assert(handle); }
-template <typename Promise> gen<Promise>::gen(gen &&rhs): co_handle(rhs.co_handle) { rhs.co_handle = nullptr; }
-template <typename Promise> gen<Promise>::~gen() { co_handle.destroy(); }
-template <typename Promise> bool gen<Promise>::resume() {
+template <class Promise, class T> gen<Promise, T>::gen(gen<Promise, T>::coroutine_handle handle) : co_handle(handle) { assert(handle); }
+template <class Promise, class T> gen<Promise, T>::gen(gen &&rhs): co_handle(rhs.co_handle) { rhs.co_handle = nullptr; }
+template <class Promise, class T> gen<Promise, T>::~gen() { co_handle.destroy(); }
+template <class Promise, class T> T gen<Promise, T>::get_value() {
+  return co_handle.promise().current_value;
+}
+template <class Promise, class T> bool gen<Promise, T>::resume() {
   bool alive = !co_handle.done();
   if (alive) co_handle.resume();
   return alive;
