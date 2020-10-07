@@ -1,7 +1,7 @@
 CC=g++
 CFLAGS=--std=c++20 -fcoroutines -Wall -O3
 
-bin/main: main.cpp
+bin/main: main.cpp generator.hpp range.hpp
 	mkdir -p bin
 	$(CC) $(CFLAGS) $< -o $@
 
