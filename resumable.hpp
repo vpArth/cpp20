@@ -62,6 +62,7 @@ template <class Promise, class T> bool gen<Promise, T>::resume() {
   if (alive) co_handle.resume();
   return alive;
 }
+template<class T> using generator = gen<CoPValue<T>, T>;
 
 /*
  promise_type {

@@ -2,7 +2,7 @@
 #include <cstdio>
 
 
-gen<CoPValue<int>, int> natural_numbers() {
+generator<int> natural_numbers() {
   for (auto i=0;; ++i) co_yield i;
 }
 
