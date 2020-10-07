@@ -94,4 +94,20 @@ void resumable::promise_type::unhandled_exception() {
  co_yield <expr>    co_await promise.yield_value(<expr>)
  co_return          co_await promise.return_void(); end!
  co_return <expr>   co_await promise.return_value(<expr>); end!
+
+Structure of coroutine lifetime:
+gen natural_numbers() {
+  promise_type promise;
+  gen retobj = promise.get_return_object();
+  co_await promise.initial_suspend();
+  try {
+    for(auto i=1;;++i) yield i; // co_await promise.yield_value(i);
+  } catch(...) {
+    promise.unhandled_exception();
+  }
+  final_suspend:
+  co_await promise.final_suspend();
+  end!
+}
+
 */
