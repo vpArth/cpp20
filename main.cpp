@@ -8,17 +8,18 @@ using std::suspend_always;
 
 
 resumable foo() {
-  cout << "Hello\n";
+  cout << "#\t\t## Hello\n";
   co_await suspend_always();
-  cout << "Coroutine\n";
+  cout << "#\t\t## Coroutine\n";
 }
 
 
 int main(){
   resumable res = foo();
-
-  int i = 0;
-  while (res.resume()) {
-    cout << ++i << "\n";
-  }
+  cout << "> initially suspended" << "\n";
+  res.resume();
+  cout << "> co_await suspended" << "\n";
+  res.resume();
+  cout << "> final suspended" << "\n";
+  res.resume();
 }

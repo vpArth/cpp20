@@ -3,6 +3,10 @@
 #include "handle.hpp"
 #include <coroutine>
 
+#include <cstdio>
+#include <iostream> 
+using std::terminate;
+
 class resumable {
 public:
   struct promise_type {
@@ -11,42 +15,83 @@ public:
     auto final_suspend();
     void return_void();
     void unhandled_exception();
+    // auto yield_value();
+    // auto return_value();
   };
-  using coro_handle = std::coroutine_handle<promise_type>;
+  using coroutine_handle = std::coroutine_handle<promise_type>;
 
-  resumable(coro_handle handle);
+  resumable(coroutine_handle handle);
   resumable(resumable&) = delete;
-  resumable(resumable&&) = delete;
+  resumable(resumable &&rhs);
   ~resumable();
 
   bool resume();
 private:
-  coro_handle handle_;
+  coroutine_handle co_handle;
 };
 
 // implementation
-#include <iostream> 
-using std::terminate;
-
-#include <coroutine>
-
-resumable::resumable(resumable::coro_handle handle) : handle_(handle) { assert(handle); }
-resumable::~resumable() { handle_.destroy(); }
+resumable::resumable(resumable::coroutine_handle handle) : co_handle(handle) { assert(handle); }
+resumable::resumable(resumable &&rhs): co_handle(rhs.co_handle) { rhs.co_handle = nullptr; }
+resumable::~resumable() { co_handle.destroy(); }
 
 bool resumable::resume() {
-  if (not handle_.done())
-    handle_.resume();
-  return not handle_.done();
+  printf("|  resume()\n");
+  if (!co_handle.done()) {
+    printf("|  Not done yet... resuming\n");
+    co_handle.resume();
+  } else {
+    printf("|  Already done\n");
+  }
+  return !co_handle.done();
 }
 
 
 auto resumable::promise_type::get_return_object() {
-  return resumable::coro_handle::from_promise(*this);
+  printf("|  get_return_object();\n");
+  return resumable::coroutine_handle::from_promise(*this);
 }
-auto resumable::promise_type::initial_suspend() { return std::suspend_always(); }
-auto resumable::promise_type::final_suspend() { return std::suspend_always(); }
+auto resumable::promise_type::initial_suspend() { 
+  printf("|  initial_suspend();\n");
+  return std::suspend_always(); 
+}
+auto resumable::promise_type::final_suspend() { 
+  printf("|  final_suspend();\n");
+  return std::suspend_always(); 
+}
 
-void resumable::promise_type::return_void() {}
+void resumable::promise_type::return_void() {
+  printf("|  return_void();\n");
+}
 void resumable::promise_type::unhandled_exception() {
+  printf("|  unhandled_exception();\n");
   terminate();
 }
+/*
+ promise_type {
+  auto get_return_object();
+
+  auto initial_suspend();
+  auto yield_value();
+  auto final_suspend();
+  auto return_value();
+  auto return_void();
+  auto unhandled_exception();
+
+ }
+ coroutine_handle<void> {
+  address()
+  from_address()
+  done()
+  resume()
+  destroy()
+ }
+ coroutine_handle<T>: public coroutine_handle<void> {
+  promise()
+  return_object from_promise(promise_type)
+ }
+
+ co_yield <expr>    co_await promise.yield_value(<expr>)
+ co_return          co_await promise.return_void(); end!
+ co_return <expr>   co_await promise.return_value(<expr>); end!
+*/
